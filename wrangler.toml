@@ -1,0 +1,3 @@
+name = "franklin-submit-wrapper"
+main = "src/index.js"
+compatibility_date = "2023-05-08"
