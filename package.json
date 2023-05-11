@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/jalagari/franklin-submit-wrapper#readme",
   "dependencies": {
+    "@cfworker/uuid": "^1.12.4",
     "itty-router": "^3.0.12"
   },
   "devDependencies": {
