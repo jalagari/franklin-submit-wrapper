@@ -4,7 +4,7 @@
   "description": "Franklin Submit service wrapper for integration",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -25,5 +25,9 @@
   "homepage": "https://github.com/jalagari/franklin-submit-wrapper#readme",
   "dependencies": {
     "itty-router": "^3.0.12"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "wrangler": "^2.20.0"
   }
 }

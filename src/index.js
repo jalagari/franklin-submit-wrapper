@@ -7,6 +7,7 @@ const forwardRequest = async (req, data, hostname) => {
   if (data &&  Object.keys(data).length > 0) {
     const url = new URL(req.url);
     url.hostname = hostname;
+    url.port = ''; // Required only for test cases.
     const request = new Request(url, {
       headers: req.headers,
       method: 'POST',
