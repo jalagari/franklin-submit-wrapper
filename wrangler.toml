@@ -1,3 +1,7 @@
 name = "franklin-submit-wrapper"
 main = "src/index.js"
 compatibility_date = "2023-05-08"
+account_id="12f081f28913f9a895d6d57068760a6d"
+
+[vars]
+ORIGIN_HOSTNAME = "main--mammotome--hlxsites.hlx.page"

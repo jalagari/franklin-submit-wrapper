@@ -22,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/jalagari/franklin-submit-wrapper/issues"
   },
-  "homepage": "https://github.com/jalagari/franklin-submit-wrapper#readme"
+  "homepage": "https://github.com/jalagari/franklin-submit-wrapper#readme",
+  "dependencies": {
+    "itty-router": "^3.0.12"
+  }
 }
