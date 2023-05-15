@@ -1,7 +1,9 @@
 import { Router } from 'itty-router';
 import CustomError from './model/CustomError.js';
+import CORSHandler from './CORSHandler.js';
 
 const router = Router();
+let corsHandler;
 
 const forwardRequest = async (req, data, hostname) => {
   if (data &&  Object.keys(data).length > 0) {
@@ -31,18 +33,31 @@ const sendResponse = (result, status = 200, headers = {}) => new Response(JSON.s
 const handleRequest = async (request, env) => {
   return router.handle(request, env)
     .then(response => {
+      const origin = request.headers.get('origin');
+      if (origin) {
+        const url = new URL(request.headers.get('origin'));
+        return corsHandler.wrapHeaders(response, origin, url?.hostname);
+      }
       return response;
     })
     .catch(async (err) => {
         console.log('Error', err);
         if(err instanceof CustomError) {
-          return sendResponse(err.getStatus(), err.code, {
+          return corsHandler.wrapHeaders(sendResponse(err.getStatus(), err.code, {
             'x-error': err.message,
-          });
+          }), request?.headers?.get('origin'));
         }
         return sendResponse(err.message, 500);
     });
 }
+
+router.options('*', async (request) => {
+  const url = new URL(request.headers.get('origin'));
+  if (corsHandler.isWhiteListedHost(url?.hostname)) {
+    return sendResponse({});
+  }
+  return sendResponse({}, 404);
+});
 
 router.post('*', async (request, env) => {
   const {data} = await request.json();
@@ -54,6 +69,7 @@ router.all('*', () => new Response('Not Found.', { status: 404 }))
 
 export default {
   fetch: async (request, env) => {
+    corsHandler = new CORSHandler(env.WHITELISTED_HOST);
     return await handleRequest(request, env);
   }
 }

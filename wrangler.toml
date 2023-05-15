@@ -5,3 +5,4 @@ account_id="12f081f28913f9a895d6d57068760a6d"
 
 [vars]
 ORIGIN_HOSTNAME = "main--mammotome--hlxsites.hlx.page"
+WHITELISTED_HOST = "['localhost:3000', 'hlxsites.hlx.page', 'hlxsites.hlx.live', 'franklin-submit-wrapper.crispr-api.workers.dev']"
