@@ -1,14 +1,15 @@
 const { unstable_dev } = require("wrangler");
+const { init, payload } = require("./util");
+
 
 describe("Franklin Sumbit Wrapper test cases", () => {
-
-  const payload = {"firstname":"test","lastname":"Test","email":"test@gmail.com","phone":"987654321","addressLine1":"Testing","addressLine2":"","city":"BANGALORE","postalcode":"56000","country":"India","product":"","serialNo":"","inquiry":"test","attachment":"e2e tests"};
-    
-  const timeout = 30000;
   let worker;
 
   beforeAll(async () => {
     worker = await unstable_dev("src/index.js", {
+      vars: {
+            GOOGLE_RECAPTCHA_SECRET_KEY: ""
+      },
       experimental: { disableExperimentalWarning: true },
     });
   });
@@ -25,11 +26,7 @@ describe("Franklin Sumbit Wrapper test cases", () => {
   });
 
   it("Submitted Form without Data", async () => {
-    const resp = await worker.fetch('/en/submit-a-tech-support-ticket/form', {
-        'Content-Type': 'application/json',
-        method: 'POST',
-        body: JSON.stringify({data : ""})
-    });
+    const resp = await worker.fetch('/en/submit-a-tech-support-ticket/form', init);
     if (resp) {
         expect(await resp.text()).toMatch("Missing data");
         expect(resp.status).toEqual(400);
@@ -37,11 +34,8 @@ describe("Franklin Sumbit Wrapper test cases", () => {
   });
 
   it("Submitted Form with empty data", async () => {
-    const resp = await worker.fetch('/en/submit-a-tech-support-ticket/form', {
-        'Content-Type': 'application/json',
-        method: 'POST',
-        body: JSON.stringify({data : {}})
-    });
+    init.body = JSON.stringify({data : {}})
+    const resp = await worker.fetch('/en/submit-a-tech-support-ticket/form', init);
     if (resp) {
         expect(await resp.text()).toMatch("Missing data");
         expect(resp.status).toEqual(400);
@@ -49,11 +43,8 @@ describe("Franklin Sumbit Wrapper test cases", () => {
   });
 
   it("Submitted Form without data attribute", async () => {
-    const resp = await worker.fetch('/en/submit-a-tech-support-ticket/form', {
-        'Content-Type': 'application/json',
-        method: 'POST',
-        body: JSON.stringify({})
-    });
+    init.body = JSON.stringify({})
+    const resp = await worker.fetch('/en/submit-a-tech-support-ticket/form', init);
     if (resp) {
         expect(await resp.text()).toMatch("Missing data");
         expect(resp.status).toEqual(400);
@@ -61,13 +52,8 @@ describe("Franklin Sumbit Wrapper test cases", () => {
   });
 
   it("Submitted Form ", async () => {
-    const resp = await worker.fetch('/en/submit-a-tech-support-ticket/form', {
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify({data : payload})
-    });
+    init.body = JSON.stringify({data : payload})
+    const resp = await worker.fetch('/en/submit-a-tech-support-ticket/form', init);
     if (resp) {
         expect(resp.status).toEqual(201);
     }

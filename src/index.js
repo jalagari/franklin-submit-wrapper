@@ -1,6 +1,7 @@
 import { Router } from 'itty-router';
 import CustomError from './model/CustomError.js';
 import CORSHandler from './CORSHandler.js';
+import googleRecaptchaValidation from './google/reCaptcha.js';
 
 const router = Router();
 let corsHandler;
@@ -19,7 +20,7 @@ const forwardRequest = async (req, data, hostname) => {
     request.headers.set('x-forwarded-host', req.headers.get('host'));
     request.headers.set('x-frame-options', 'deny');
     const response = await fetch(request);
-    console.log('Forward request', request.url, 'Status', response.status, data);
+    console.log('Forward request', request.url, 'Status', response.status);
     return new Response(response.body, response);
   }
   throw new CustomError('Missing data', 400);
@@ -31,9 +32,9 @@ const sendResponse = (result, status = 200, headers = {}) => new Response(JSON.s
 });
 
 const handleRequest = async (request, env) => {
+  const origin = request.headers.get('origin');
   return router.handle(request, env)
     .then(response => {
-      const origin = request.headers.get('origin');
       if (origin) {
         const url = new URL(request.headers.get('origin'));
         return corsHandler.wrapHeaders(response, origin, url?.hostname);
@@ -42,12 +43,16 @@ const handleRequest = async (request, env) => {
     })
     .catch(async (err) => {
         console.log('Error', err);
-        if(err instanceof CustomError) {
-          return corsHandler.wrapHeaders(sendResponse(err.getStatus(), err.code, {
-            'x-error': err.message,
-          }), request?.headers?.get('origin'));
+        let msg = err instanceof CustomError ? err.getStatus() : err.message;
+        let code = err?.code || 500;
+        let headers = {
+          'x-error': err.message || "Server side error",
+        };
+        if (origin) {
+          const url = new URL(request.headers.get('origin'));
+          return corsHandler.wrapHeaders(sendResponse(msg, code, headers), origin, url?.hostname);
         }
-        return sendResponse(err.message, 500);
+        return sendResponse(msg, code, headers);
     });
 }
 
@@ -60,8 +65,10 @@ router.options('*', async (request) => {
 });
 
 router.post('*', async (request, env) => {
-  const {data} = await request.json();
+  const {data, token} = await request.json();
   const redirectHostName = env.ORIGIN_HOSTNAME;
+  env.GOOGLE_RECAPTCHA_SECRET_KEY &&
+   await googleRecaptchaValidation(env.GOOGLE_RECAPTCHA_SECRET_KEY, token, env.GOOGLE_RECAPTCHA_URL);
   return await forwardRequest(request, data, redirectHostName);
 });
 
