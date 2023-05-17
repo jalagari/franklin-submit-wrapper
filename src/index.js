@@ -1,35 +1,49 @@
 import { Router } from 'itty-router';
+import ContentType from "./model/ContentType.js";
 import CustomError from './model/CustomError.js';
 import CORSHandler from './CORSHandler.js';
 import googleRecaptchaValidation from './google/reCaptcha.js';
+import FileUpload from './upload/FileUpload.js';
 
 const router = Router();
-let corsHandler;
+let corsHandler, fileUpload;
 
 const forwardRequest = async (req, data, hostname) => {
-  if (data &&  Object.keys(data).length > 0) {
-    const url = new URL(req.url);
-    url.hostname = hostname;
-    url.port = ''; // Required only for test cases.
-    const request = new Request(url, {
-      headers: req.headers,
-      method: 'POST',
-      body: JSON.stringify({data : data}),
-    });
-    request.headers.set('x-byo-cdn-type', 'cloudflare');
-    request.headers.set('x-forwarded-host', req.headers.get('host'));
-    request.headers.set('x-frame-options', 'deny');
-    const response = await fetch(request);
-    console.log('Forward request', request.url, 'Status', response.status);
-    return new Response(response.body, response);
-  }
-  throw new CustomError('Missing data', 400);
+  const url = new URL(req.url);
+  url.hostname = hostname;
+  url.port = ''; // Required only for test cases.
+  const request = new Request(url, {
+    headers: { 
+      ...req.headers,
+      'content-type': ContentType.APPLICATION_JSON,
+    },
+    method: 'POST',
+    body: JSON.stringify({data : data}),
+  });
+  request.headers.set('x-byo-cdn-type', 'cloudflare');
+  request.headers.set('x-forwarded-host', req.headers.get('host'));
+  request.headers.set('x-frame-options', 'deny');
+  const response = await fetch(request);
+  console.log('Forward request', request.url, 'Status', response.status, data.file);
+  return new Response(response.body, response);
 };
 
 const sendResponse = (result, status = 200, headers = {}) => new Response(JSON.stringify(result), {
   status,
   headers,
 });
+
+const validateRequest = (data, contentType) => {
+  if (!contentType || 
+      (!contentType.startsWith(ContentType.APPLICATION_JSON) 
+      && !contentType.startsWith(ContentType.MULTI_PART))) {
+      throw new CustomError(`Unsupported content-type - ${contentType}`, 415);
+  }
+
+  if (!data ||  Object.keys(data).length == 0) {
+    throw new CustomError('Missing data', 400);
+  }
+}
 
 const handleRequest = async (request, env) => {
   const origin = request.headers.get('origin');
@@ -65,10 +79,24 @@ router.options('*', async (request) => {
 });
 
 router.post('*', async (request, env) => {
-  const {data, token} = await request.json();
   const redirectHostName = env.ORIGIN_HOSTNAME;
+  const contentType = request.headers.get('Content-Type') || ContentType.APPLICATION_JSON;
+  let data, token, formData;
+  if (contentType.startsWith(ContentType.APPLICATION_JSON)) {
+    ({data, token} = await request.json());
+  } else if (contentType.startsWith(ContentType.MULTI_PART)) {
+    formData = await request.formData();
+    token = await formData.get('token');
+    data = await formData.get('data');
+    data = data ? JSON.parse(data) : {};
+  }
+  
+  validateRequest(data, contentType);
   env.GOOGLE_RECAPTCHA_SECRET_KEY &&
-   await googleRecaptchaValidation(env.GOOGLE_RECAPTCHA_SECRET_KEY, token, env.GOOGLE_RECAPTCHA_URL);
+    await googleRecaptchaValidation(env.GOOGLE_RECAPTCHA_SECRET_KEY, token, env.GOOGLE_RECAPTCHA_URL);
+
+  formData && await fileUpload.verifyAndUploadFiles(data, formData);
+ 
   return await forwardRequest(request, data, redirectHostName);
 });
 
@@ -76,6 +104,7 @@ router.all('*', () => new Response('Not Found.', { status: 404 }))
 
 export default {
   fetch: async (request, env) => {
+    fileUpload = new FileUpload(env);
     corsHandler = new CORSHandler(env.WHITELISTED_HOST);
     return await handleRequest(request, env);
   }

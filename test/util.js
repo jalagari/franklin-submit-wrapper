@@ -7,3 +7,9 @@ exports.init = {
   method: 'POST',
   body: JSON.stringify({data : ""})
 }
+
+exports.verifyResponse = async (resp, msg, code) => {
+  expect(resp).not.toBeNull();
+  expect(await resp.text()).toMatch(msg);
+  expect(resp.status).toEqual(code);
+}
