@@ -16,13 +16,13 @@ const forwardRequest = async (req, data, hostname) => {
     headers: { 
       ...req.headers,
       'content-type': ContentType.APPLICATION_JSON,
+      'x-byo-cdn-type': 'cloudflare',
+      'x-forwarded-host': req?.headers?.get('host'),
+      'x-frame-options': 'deny',
     },
     method: 'POST',
     body: JSON.stringify({data : data}),
   });
-  request.headers.set('x-byo-cdn-type', 'cloudflare');
-  request.headers.set('x-forwarded-host', req.headers.get('host'));
-  request.headers.set('x-frame-options', 'deny');
   const response = await fetch(request);
   console.log('Forward request', request.url, 'Status', response.status, data.file);
   return new Response(response.body, response);
@@ -47,27 +47,26 @@ const validateRequest = (data, contentType) => {
 
 const handleRequest = async (request, env) => {
   const origin = request.headers.get('origin');
-  return router.handle(request, env)
-    .then(response => {
-      if (origin) {
-        const url = new URL(request.headers.get('origin'));
-        return corsHandler.wrapHeaders(response, origin, url?.hostname);
-      }
-      return response;
-    })
-    .catch(async (err) => {
-        console.log('Error', err);
-        let msg = err instanceof CustomError ? err.getStatus() : err.message;
-        let code = err?.code || 500;
-        let headers = {
-          'x-error': err.message || "Server side error",
-        };
-        if (origin) {
-          const url = new URL(request.headers.get('origin'));
-          return corsHandler.wrapHeaders(sendResponse(msg, code, headers), origin, url?.hostname);
-        }
-        return sendResponse(msg, code, headers);
-    });
+  try {
+    let response = await router.handle(request, env);
+    if (origin) {
+      const url = new URL(request.headers.get('origin'));
+      return corsHandler.wrapHeaders(response, origin, url?.hostname);
+    }
+    return response;
+  } catch(err) {
+    console.log('Error', err);
+    let msg = err instanceof CustomError ? err.getStatus() : err.message;
+    let code = err?.code || 500;
+    let headers = {
+      'x-error': err.message || "Server side error",
+    };
+    if (origin) {
+      const url = new URL(request.headers.get('origin'));
+      return corsHandler.wrapHeaders(sendResponse(msg, code, headers), origin, url?.hostname);
+    }
+    return sendResponse(msg, code, headers);
+  }
 }
 
 router.options('*', async (request) => {

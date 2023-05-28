@@ -13,7 +13,7 @@ export default class FileUpload {
   constructor(env) {
     this.perFileSize = env.FILE_SIZE_LIMIT_IN_MB || this.perFileSize;
     this.totalFileSize = env.TOTAL_FILE_SIZE_LIMIT_IN_MB || this.totalFileSize;
-    this.allowedFiles = env.FILE_ALLOWED || this.allowedFiles;
+    this.allowedFiles = env.FILE_ALLOWED ? env.FILE_ALLOWED.split(',') : this.allowedFiles;
   }
 
   #validateFile(file) {
@@ -23,7 +23,7 @@ export default class FileUpload {
       throw new CustomError(`File size should be < ${this.perFileSize} MB.`, 413);
     }
     
-    if (this.allowedFiles?.length > 0 && !this.allowedFiles.includes(file?.type)) {
+    if (!this.allowedFiles.includes(file?.type)) {
       throw new CustomError(`${file?.type} based files are not supported.`, 415);
     }
 
@@ -37,17 +37,17 @@ export default class FileUpload {
       fileNames = JSON.parse(fileNames);
       fileNames.forEach((fileName) => {
         const files = formData.getAll(fileName);
-        [...files].forEach((file) => {
+        for (const file of files) {
           if (file instanceof File) {
             payload[fileName] = this.#uploadFile(file);
           }
-        });
+        }
       });
     }
   }
 
   #generateFolderPath() {
-    const date = Date.now();
+    const date = new Date();
     let path = this.includeDate ? `${date.getFullYear()}/${date.getMonth()}/${date.getDay()}/` : '';
     path += uuid();
 
@@ -55,8 +55,8 @@ export default class FileUpload {
   }
 
   #uploadFile(file) {
-    this.displayFileInfo(file);
     this.#validateFile(file);
+    this.displayFileInfo(file);
     return `${this.#generateFolderPath()}/${file.name}`;
   }
 
