@@ -1,31 +1,23 @@
 import { uuid } from "@cfworker/uuid";
 
-export class Util {
-    static FRANKLIN_UPLOAD_KV = null;
-    
-    static getUUID() {
-        return uuid();
+export function getURLEncoded(data) {
+    const formBody = [];
+    for (var property in data) {
+        var encodedKey = encodeURIComponent(property);
+        var encodedValue = encodeURIComponent(data[property]);
+        formBody.push(encodedKey + "=" + encodedValue);
     }
+    return formBody.join("&");
+}
 
-    static getURLEncoded(data) {
-        const formBody = [];
-        for (var property in data) {
-            var encodedKey = encodeURIComponent(property);
-            var encodedValue = encodeURIComponent(data[property]);
-            formBody.push(encodedKey + "=" + encodedValue);
-        }
-        return formBody.join("&");
-    }
+export function sanitizeFileName(fileName) {
+    return fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+}
 
-    static setCache = async (data) => await Util.FRANKLIN_UPLOAD_KV?.put('token', JSON.stringify(data))
+export function getUUID() {
+    return uuid();
+}
 
-    static getCache = async() => {
-        let data = await Util.FRANKLIN_UPLOAD_KV?.get('token');
-        if (data) {
-            return JSON.parse(data);
-        }
-        return {};
-    }
-
-    static isTokenExipred = (error) => error?.message === 'Access token has expired or is not yet valid.'
+export function isTokenExipred (error) {
+    return error?.message === 'Access token has expired or is not yet valid.'
 }

@@ -1,8 +1,11 @@
 import { MicrosoftGraphSharePoint } from "../microsoft/MicrosoftGraphSharePoint";
-import FileUpload from "./FileUpload"
+import AbstractFileUpload from "./AbstractFileUpload"
 
-export default class SharePointFileUpload extends FileUpload {
+export default class SharePointFileUpload extends AbstractFileUpload {
 
+    /**
+     * SharePoint Client {@link MicrosoftGraphSharePoint}. 
+     */
     sharePoint;
 
     constructor(env) {
@@ -10,18 +13,12 @@ export default class SharePointFileUpload extends FileUpload {
         this.sharePoint = new MicrosoftGraphSharePoint(env);
     }
 
-    async generateFolderPath() { 
-        const folderName = super.generateFolderPath();
+    async createFolder(folderName) { 
         await this.sharePoint.createFolder(folderName);
-        return folderName;
     }
 
     async uploadFile(folderName, file) {
-       super.uploadFile(folderName, file);
-
         await this.sharePoint.createFile(folderName, file.name, await file.arrayBuffer(), file.type)
-
         return `${folderName}/${file.name}`;
     }
-
 }

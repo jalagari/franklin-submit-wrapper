@@ -1,6 +1,6 @@
 import { Client } from "@microsoft/microsoft-graph-client";
 import { OBOFAuthenticationProvider } from "./OBOFAuthenticationProvider.js";
-import { Util } from "../model/Util.js";
+import { isTokenExipred } from "../model/Util.js";
 
 export class MicrosoftGraphSharePoint {
 
@@ -23,28 +23,14 @@ export class MicrosoftGraphSharePoint {
         this.#obofAuthenticationProvider =  new OBOFAuthenticationProvider(env); 
 
         this.#client = Client.initWithMiddleware({
-            debugLogging: true,
+            debugLogging: false,
             authProvider: this.#obofAuthenticationProvider
         }); 
     }
 
-    #getDefaultItem = async () => {
-        let response = await this.#client.api(`${this.#url}/root:/${this.#defaultPath}`).get();
-        return response;
-    }
-
-    #getItem = async (path) => {
-        let response = await this.#client.api(`${this.#url}/root:/${this.#defaultPath}/${path}`).get();
-        return response;
-    }
-
-    createFolder = async(folderName) => {
+    async createFolder(folderName) {
         try {
             console.log(`Creating Folder with name ${folderName}`)
-            if (!this.#folderId) {
-                let item = await this.#getDefaultItem(this.#defaultPath);
-                this.#folderId = item?.id;
-            }
     
             const driveItem = {
                 name: folderName,
@@ -62,7 +48,7 @@ export class MicrosoftGraphSharePoint {
         }
     }
 
-    createFile = async(folderName, fileName, content, contentType) => {
+    async createFile(folderName, fileName, content, contentType) {
         try {
             console.log(`Uploading File with name ${fileName}`)
             let response = await this.#client
@@ -72,22 +58,21 @@ export class MicrosoftGraphSharePoint {
             console.log(`File Uploading completed`)
             return response;
         } catch (err) {
-            await this.retryWithTokenRefresh(err, this.createFolder, folderName);
+            await this.retryWithTokenRefresh(err, this.createFile, folderName, fileName, content, contentType);
         }
     }
 
-    createEmptyFile = async(folderName, fileName = 'file1.json') => {
+    async createEmptyFile(folderName, fileName = 'file1.json') {
 
         let content = {name: "dummy file"};
         return await this.createFile(folderName, fileName, content, 'application/json');
     }
 
     async retryWithTokenRefresh(err, execFun, ...args) {
-        if( !this.#tokenRefreshTried && Util.isTokenExipred(err)) {
+        if( !this.#tokenRefreshTried && isTokenExipred(err)) {
             await this.#obofAuthenticationProvider.refreshAccessToken();
             this.#tokenRefreshTried = true;
             execFun && execFun.apply(this, args)
-            this.createFolder(folderName);
         } else {
             throw err;
         }

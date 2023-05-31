@@ -1,7 +1,7 @@
 import { uuid } from "@cfworker/uuid";
 import CustomError from '../model/CustomError.js';
 
-export default class FileUpload {
+export default class AbstractFileUpload {
   includeDate = false;
 
   perFileSize = 2;
@@ -37,9 +37,11 @@ export default class FileUpload {
       fileFields = JSON.parse(fileFields);
       for( let fileField of fileFields) {
         const files = formData.getAll(fileField);
-        const folderName = await this.generateFolderPath();
+        const folderName = this.#generateFolderPath();
+        await this.createFolder(folderName);
         for (const file of files) {
           if (file instanceof File) {
+            this.validateFile(file);
             await this.uploadFile(folderName, file);
           }
         }
@@ -48,7 +50,7 @@ export default class FileUpload {
     }
   }
 
-  generateFolderPath() {
+  #generateFolderPath() {
     const date = new Date();
     let path = this.includeDate ? `${date.getFullYear()}/${date.getMonth()}/${date.getDay()}/` : '';
     path += uuid();
@@ -56,10 +58,12 @@ export default class FileUpload {
     return path;
   }
 
-  uploadFile(folderName, file) {
-    this.validateFile(file);
-    this.displayFileInfo(file);
-    return `${folderName}/${file.name}`;
+  async createFolder(folderName) {
+    throw new Error('Not Supported, Expected to implemented by parent class');
+  }
+
+  async uploadFile(folderName, file) {
+    throw new Error('Not Supported, Expected to implemented by parent class');
   }
 
   // eslint-disable-next-line class-methods-use-this

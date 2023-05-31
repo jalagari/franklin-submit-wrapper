@@ -1,5 +1,6 @@
+import Cache from "../Cache";
 import CustomError from "../model/CustomError";
-import { Util } from "../model/Util";
+import { getURLEncoded, getUUID } from "../model/Util.js";
 
 export class OBOFAuthenticationProvider {
 
@@ -13,6 +14,7 @@ export class OBOFAuthenticationProvider {
     accessToken;
     code;
     hostURL;
+    cache;
 
     constructor(env) {
         this.clientId = env.AZURE_CLIENT_ID;
@@ -20,10 +22,12 @@ export class OBOFAuthenticationProvider {
         this.tenantId = env.AZURE_TENANT_ID;
         this.hostURL = env.HOST_URL;
         this.scope = env.APP_SCOPE || 'https://graph.microsoft.com/.default';
+        this.cache = new Cache(env.FRANKLIN_UPLOAD_KV)
+
     }
 
     authorize() {
-        let uuid = Util.getUUID();
+        let uuid = getUUID();
         const url =`https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/authorize?client_id=${this.clientId}&response_type=code&redirect_uri=${this.hostURL}${this.redirectPath}&response_mode=query&scope=${encodeURIComponent(this.scope)}&state=${uuid}`
         return url;
     }
@@ -48,14 +52,14 @@ export class OBOFAuthenticationProvider {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                 },
-            body: Util.getURLEncoded(data)
+            body: getURLEncoded(data)
         })
-        console.log('Token Gen status', response.status, response.statusText)
+        console.log('Token Gen status', response.status)
         if(response.ok) {
             const result = await response.json();
             if(includInCache) {
                 delete this.token.sharePointToken;
-                await Util.setCache(result);
+                await this.cache?.put('token', result);
             }
             return result?.access_token;
         } else {
@@ -65,7 +69,7 @@ export class OBOFAuthenticationProvider {
     }
 
     async refreshAccessToken() {
-        this.token = await Util.getCache()
+        this.token = await this.cache?.get('token');
         if(this.token?.refresh_token) {
             console.log(`Generating access token using refresh token`)
             this.accessToken = await this.#getToken('refresh_token');
@@ -76,7 +80,7 @@ export class OBOFAuthenticationProvider {
 
     async getAccessToken(code) {
         this.code = code;
-        this.token = await Util.getCache()
+        this.token = await this.cache?.get('token');
         this.accessToken = this.token?.access_token;
         if(code) {
             console.log(`Generating access token`)

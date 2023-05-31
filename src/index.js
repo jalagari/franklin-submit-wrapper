@@ -3,13 +3,11 @@ import ContentType from "./model/ContentType.js";
 import CustomError from './model/CustomError.js';
 import CORSHandler from './CORSHandler.js';
 import googleRecaptchaValidation from './google/reCaptcha.js';
-import FileUpload from './upload/FileUpload.js';
 import { OBOFAuthenticationProvider } from './microsoft/OBOFAuthenticationProvider.js';
 import SharePointFileUpload from './upload/SharePointFileUpload.js';
-import { Util } from './model/Util.js';
 
 const router = Router();
-let corsHandler, fileUpload, obofAuthenticationProvider;
+let corsHandler;
 
 const forwardRequest = async (req, data, hostname) => {
   const url = new URL(req.url);
@@ -82,11 +80,13 @@ router.options('*', async (request) => {
 
 router.get('/register/token', async (request, env) => {
   const {code, state, session_state} = request.query;
+  const obofAuthenticationProvider = new OBOFAuthenticationProvider(env);
   await obofAuthenticationProvider.getAccessToken(code);
   return sendResponse({received : true});
 })
 
 router.get('/authorize', async (request) => {
+  const obofAuthenticationProvider = new OBOFAuthenticationProvider(env);
   const result = {link : obofAuthenticationProvider.authorize()};
   return sendResponse(result);
 })
@@ -108,6 +108,7 @@ router.post('*', async (request, env) => {
   env.GOOGLE_RECAPTCHA_SECRET_KEY &&
     await googleRecaptchaValidation(env.GOOGLE_RECAPTCHA_SECRET_KEY, token, env.GOOGLE_RECAPTCHA_URL);
 
+  const fileUpload = new SharePointFileUpload(env);
   formData && await fileUpload.verifyAndUploadFiles(data, formData);
  
   return await forwardRequest(request, data, redirectHostName);
@@ -117,10 +118,7 @@ router.all('*', () => new Response('Not Found.', { status: 404 }))
 
 export default {
   fetch: async (request, env) => {
-    Util.FRANKLIN_UPLOAD_KV = env.FRANKLIN_UPLOAD_KV;
-    fileUpload = new SharePointFileUpload(env);
     corsHandler = new CORSHandler(env.WHITELISTED_HOST);
-    obofAuthenticationProvider = new OBOFAuthenticationProvider(env);
     return await handleRequest(request, env);
   }
 }
