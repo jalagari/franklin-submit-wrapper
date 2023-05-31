@@ -4,9 +4,12 @@ import CustomError from './model/CustomError.js';
 import CORSHandler from './CORSHandler.js';
 import googleRecaptchaValidation from './google/reCaptcha.js';
 import FileUpload from './upload/FileUpload.js';
+import { OBOFAuthenticationProvider } from './microsoft/OBOFAuthenticationProvider.js';
+import SharePointFileUpload from './upload/SharePointFileUpload.js';
+import { Util } from './model/Util.js';
 
 const router = Router();
-let corsHandler, fileUpload;
+let corsHandler, fileUpload, obofAuthenticationProvider;
 
 const forwardRequest = async (req, data, hostname) => {
   const url = new URL(req.url);
@@ -24,7 +27,7 @@ const forwardRequest = async (req, data, hostname) => {
     body: JSON.stringify({data : data}),
   });
   const response = await fetch(request);
-  console.log('Forward request', request.url, 'Status', response.status, data.file);
+  console.log('Forward request', request.url, 'Status', response.status);
   return new Response(response.body, response);
 };
 
@@ -77,6 +80,17 @@ router.options('*', async (request) => {
   return sendResponse({}, 404);
 });
 
+router.get('/register/token', async (request, env) => {
+  const {code, state, session_state} = request.query;
+  await obofAuthenticationProvider.getAccessToken(code);
+  return sendResponse({received : true});
+})
+
+router.get('/authorize', async (request) => {
+  const result = {link : obofAuthenticationProvider.authorize()};
+  return sendResponse(result);
+})
+
 router.post('*', async (request, env) => {
   const redirectHostName = env.ORIGIN_HOSTNAME;
   const contentType = request.headers.get('Content-Type') || ContentType.APPLICATION_JSON;
@@ -103,8 +117,10 @@ router.all('*', () => new Response('Not Found.', { status: 404 }))
 
 export default {
   fetch: async (request, env) => {
-    fileUpload = new FileUpload(env);
+    Util.FRANKLIN_UPLOAD_KV = env.FRANKLIN_UPLOAD_KV;
+    fileUpload = new SharePointFileUpload(env);
     corsHandler = new CORSHandler(env.WHITELISTED_HOST);
+    obofAuthenticationProvider = new OBOFAuthenticationProvider(env);
     return await handleRequest(request, env);
   }
 }

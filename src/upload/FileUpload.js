@@ -16,7 +16,7 @@ export default class FileUpload {
     this.allowedFiles = env.FILE_ALLOWED ? env.FILE_ALLOWED.split(',') : this.allowedFiles;
   }
 
-  #validateFile(file) {
+  validateFile(file) {
     const fileMb = file.size / 1024 ** 2;
     console.log("File size", fileMb, this.perFileSize)
     if (fileMb > this.perFileSize) {
@@ -30,23 +30,25 @@ export default class FileUpload {
     // TODO - validate file name length
   }
 
-  verifyAndUploadFiles(payload, formData) {
-    let fileNames = formData.get('fileNames');
-    console.log("File Names", fileNames, this.perFileSize)
-    if (fileNames && formData) {
-      fileNames = JSON.parse(fileNames);
-      fileNames.forEach((fileName) => {
-        const files = formData.getAll(fileName);
+  async verifyAndUploadFiles(payload, formData) {
+    let fileFields = formData.get('fileFields');
+    console.log("File Fields", fileFields, this.perFileSize)
+    if (fileFields && formData) {
+      fileFields = JSON.parse(fileFields);
+      for( let fileField of fileFields) {
+        const files = formData.getAll(fileField);
+        const folderName = await this.generateFolderPath();
         for (const file of files) {
           if (file instanceof File) {
-            payload[fileName] = this.#uploadFile(file);
+            await this.uploadFile(folderName, file);
           }
         }
-      });
+        payload[fileField] = folderName;
+      }
     }
   }
 
-  #generateFolderPath() {
+  generateFolderPath() {
     const date = new Date();
     let path = this.includeDate ? `${date.getFullYear()}/${date.getMonth()}/${date.getDay()}/` : '';
     path += uuid();
@@ -54,10 +56,10 @@ export default class FileUpload {
     return path;
   }
 
-  #uploadFile(file) {
-    this.#validateFile(file);
+  uploadFile(folderName, file) {
+    this.validateFile(file);
     this.displayFileInfo(file);
-    return `${this.#generateFolderPath()}/${file.name}`;
+    return `${folderName}/${file.name}`;
   }
 
   // eslint-disable-next-line class-methods-use-this
