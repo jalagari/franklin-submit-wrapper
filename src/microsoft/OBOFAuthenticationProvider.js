@@ -32,7 +32,7 @@ export class OBOFAuthenticationProvider {
         return url;
     }
     
-    async #getToken(grantType= 'authorization_code', includInCache = true) {
+    async #getToken(grantType= 'authorization_code', includeInCache = true) {
         let data = {
             client_id: this.clientId,
             client_secret: this.clientSecret,
@@ -57,7 +57,7 @@ export class OBOFAuthenticationProvider {
         console.log('Token Gen status', response.status)
         if(response.ok) {
             const result = await response.json();
-            if(includInCache) {
+            if(includeInCache) {
                 delete this.token.sharePointToken;
                 await this.cache?.put('token', result);
             }
