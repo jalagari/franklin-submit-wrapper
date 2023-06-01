@@ -1,4 +1,5 @@
 import { MicrosoftGraphSharePoint } from "../microsoft/MicrosoftGraphSharePoint";
+import { sanitizeFileName } from "../model/Util";
 import AbstractFileUpload from "./AbstractFileUpload"
 
 export default class SharePointFileUpload extends AbstractFileUpload {
@@ -17,8 +18,8 @@ export default class SharePointFileUpload extends AbstractFileUpload {
         await this.sharePoint.createFolder(folderName);
     }
 
-    async uploadFile(folderName, file) {
-        await this.sharePoint.createFile(folderName, file.name, await file.arrayBuffer(), file.type)
-        return `${folderName}/${file.name}`;
+    async uploadFile(folderName, file, fileName) {
+        await this.sharePoint.createFile(folderName, fileName, await file.arrayBuffer(), file.type)
+        return `${folderName}/${fileName}`;
     }
 }

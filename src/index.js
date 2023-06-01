@@ -57,11 +57,8 @@ const handleRequest = async (request, env) => {
     return response;
   } catch(err) {
     console.log('Error', err);
-    let msg = err instanceof CustomError ? err.getStatus() : err.message;
+    let msg = err instanceof CustomError ? err.getStatus() : "unexpected server side error";
     let code = err?.code || 500;
-    let headers = {
-      'x-error': err.message || "Server side error",
-    };
     if (origin) {
       const url = new URL(request.headers.get('origin'));
       return corsHandler.wrapHeaders(sendResponse(msg, code, headers), origin, url?.hostname);

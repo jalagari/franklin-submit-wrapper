@@ -1,5 +1,6 @@
 import { uuid } from "@cfworker/uuid";
 import CustomError from '../model/CustomError.js';
+import { sanitizeFileName } from "../model/Util.js";
 
 export default class AbstractFileUpload {
   includeDate = false;
@@ -27,7 +28,9 @@ export default class AbstractFileUpload {
       throw new CustomError(`${file?.type} based files are not supported.`, 415);
     }
 
-    // TODO - validate file name length
+    if (file?.name?.length > 100) {
+      throw new CustomError(`File name can't be morethan 100 characters`, 400);
+    }
   }
 
   async verifyAndUploadFiles(payload, formData) {
@@ -42,7 +45,8 @@ export default class AbstractFileUpload {
         for (const file of files) {
           if (file instanceof File) {
             this.validateFile(file);
-            await this.uploadFile(folderName, file);
+            const fileName = sanitizeFileName(file.name);
+            await this.uploadFile(folderName, file, fileName);
           }
         }
         payload[fileField] = folderName;
@@ -62,7 +66,7 @@ export default class AbstractFileUpload {
     throw new Error('Not Supported, Expected to implemented by parent class');
   }
 
-  async uploadFile(folderName, file) {
+  async uploadFile(folderName, file, fileName) {
     throw new Error('Not Supported, Expected to implemented by parent class');
   }
 
