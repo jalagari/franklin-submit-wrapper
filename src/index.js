@@ -15,7 +15,7 @@ const forwardRequest = async (req, data, hostname) => {
   url.port = ''; // Required only for test cases.
   const request = new Request(url, {
     headers: { 
-      ...req.headers,
+      ...req?.headers,
       'content-type': ContentType.APPLICATION_JSON,
       'x-byo-cdn-type': 'cloudflare',
       'x-forwarded-host': req?.headers?.get('host'),
@@ -47,11 +47,11 @@ const validateRequest = (data, contentType) => {
 }
 
 const handleRequest = async (request, env) => {
-  const origin = request.headers.get('origin');
+  const origin = request?.headers?.get('origin');
   try {
     let response = await router.handle(request, env);
     if (origin) {
-      const url = new URL(request.headers.get('origin'));
+      const url = new URL(request?.headers?.get('origin'));
       return corsHandler.wrapHeaders(response, origin, url?.hostname);
     }
     return response;
@@ -60,15 +60,15 @@ const handleRequest = async (request, env) => {
     let msg = err instanceof CustomError ? err.getStatus() : "unexpected server side error";
     let code = err?.code || 500;
     if (origin) {
-      const url = new URL(request.headers.get('origin'));
-      return corsHandler.wrapHeaders(sendResponse(msg, code, headers), origin, url?.hostname);
+      const url = new URL(request?.headers?.get('origin'));
+      return corsHandler.wrapHeaders(sendResponse(msg, code), origin, url?.hostname);
     }
-    return sendResponse(msg, code, headers);
+    return sendResponse(msg, code);
   }
 }
 
 router.options('*', async (request) => {
-  const url = new URL(request.headers.get('origin'));
+  const url = new URL(request?.headers?.get('origin'));
   if (corsHandler.isWhiteListedHost(url?.hostname)) {
     return sendResponse({});
   }
@@ -82,7 +82,7 @@ router.get('/register/token', async (request, env) => {
   return sendResponse({received : true});
 })
 
-router.get('/authorize', async (request) => {
+router.get('/authorize', async (request, env) => {
   const obofAuthenticationProvider = new OBOFAuthenticationProvider(env);
   const result = {link : obofAuthenticationProvider.authorize()};
   return sendResponse(result);
@@ -90,7 +90,7 @@ router.get('/authorize', async (request) => {
 
 router.post('*', async (request, env) => {
   const redirectHostName = env.ORIGIN_HOSTNAME;
-  const contentType = request.headers.get('Content-Type') || ContentType.APPLICATION_JSON;
+  const contentType = request?.headers?.get('Content-Type') || ContentType.APPLICATION_JSON;
   let data, token, formData;
   if (contentType.startsWith(ContentType.APPLICATION_JSON)) {
     ({data, token} = await request.json());
