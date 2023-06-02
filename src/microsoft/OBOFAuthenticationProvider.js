@@ -1,6 +1,6 @@
 import Cache from "../Cache";
 import CustomError from "../model/CustomError";
-import { getURLEncoded, getUUID } from "../model/Util.js";
+import { getUUID } from "../model/Util.js";
 
 export class OBOFAuthenticationProvider {
 
@@ -52,7 +52,7 @@ export class OBOFAuthenticationProvider {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                 },
-            body: getURLEncoded(data)
+            body:  new URLSearchParams(data).toString()
         })
         console.log('Token Gen status', response.status)
         if(response.ok) {
