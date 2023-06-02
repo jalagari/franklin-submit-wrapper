@@ -1,7 +1,8 @@
 import { uuid } from "@cfworker/uuid";
 import CustomError from '../model/CustomError.js';
+import { sanitizeFileName } from "../model/Util.js";
 
-export default class FileUpload {
+export default class AbstractFileUpload {
   includeDate = false;
 
   perFileSize = 2;
@@ -16,7 +17,7 @@ export default class FileUpload {
     this.allowedFiles = env.FILE_ALLOWED ? env.FILE_ALLOWED.split(',') : this.allowedFiles;
   }
 
-  #validateFile(file) {
+  validateFile(file) {
     const fileMb = file.size / 1024 ** 2;
     console.log("File size", fileMb, this.perFileSize)
     if (fileMb > this.perFileSize) {
@@ -27,22 +28,29 @@ export default class FileUpload {
       throw new CustomError(`${file?.type} based files are not supported.`, 415);
     }
 
-    // TODO - validate file name length
+    if (file?.name?.length > 100) {
+      throw new CustomError(`File name can't be morethan 100 characters`, 400);
+    }
   }
 
-  verifyAndUploadFiles(payload, formData) {
-    let fileNames = formData.get('fileNames');
-    console.log("File Names", fileNames, this.perFileSize)
-    if (fileNames && formData) {
-      fileNames = JSON.parse(fileNames);
-      fileNames.forEach((fileName) => {
-        const files = formData.getAll(fileName);
+  async verifyAndUploadFiles(payload, formData) {
+    let fileFields = formData.get('fileFields');
+    console.log("File Fields", fileFields, this.perFileSize)
+    if (fileFields && formData) {
+      fileFields = JSON.parse(fileFields);
+      for( let fileField of fileFields) {
+        const files = formData.getAll(fileField);
+        const folderName = this.#generateFolderPath();
+        await this.createFolder(folderName);
         for (const file of files) {
           if (file instanceof File) {
-            payload[fileName] = this.#uploadFile(file);
+            this.validateFile(file);
+            const fileName = sanitizeFileName(file.name);
+            await this.uploadFile(folderName, file, fileName);
           }
         }
-      });
+        payload[fileField] = folderName;
+      }
     }
   }
 
@@ -54,10 +62,12 @@ export default class FileUpload {
     return path;
   }
 
-  #uploadFile(file) {
-    this.#validateFile(file);
-    this.displayFileInfo(file);
-    return `${this.#generateFolderPath()}/${file.name}`;
+  async createFolder(folderName) {
+    throw new Error('Not Supported, Expected to implemented by parent class');
+  }
+
+  async uploadFile(folderName, file, fileName) {
+    throw new Error('Not Supported, Expected to implemented by parent class');
   }
 
   // eslint-disable-next-line class-methods-use-this
