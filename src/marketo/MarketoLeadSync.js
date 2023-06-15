@@ -1,17 +1,17 @@
+import Cache from "../Cache.js";
 import CustomError from "../model/CustomError.js";
 
 export default async function createLead(data, env) {
   const configCache = new Cache(env.MARKETO_UPLOAD_KV);
-  const marketoConfig = await getMarketoConfig(env, configCache);
-  const currentTime = Date.now() / 1000;
+
+  const marketoAccessToken = await configCache.get(
+    env.MARKETO_ACCESS_TOKEN_KEY
+  );
 
   // Check if access token is expired or not set
-  if (
-    !marketoConfig.accessToken ||
-    marketoConfig.expirationTime < currentTime
-  ) {
+  if (!marketoAccessToken) {
     // Get a new access token
-    await renewAccessToken(marketoConfig, env, configCache);
+    await renewAccessToken(env, configCache);
   }
 
   const payload = createMarketoPayload(data, env);
@@ -20,7 +20,7 @@ export default async function createLead(data, env) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${marketoConfig.accessToken}`,
+      Authorization: `Bearer ${marketoAccessToken}`,
     },
     body: JSON.stringify(payload),
   });
@@ -29,46 +29,44 @@ export default async function createLead(data, env) {
   if (!responseData.success) {
     // If token is expired, attempt to renew the access token and retry
     if (responseData.errors?.[0]?.code === 602) {
-      await renewAccessToken(marketoConfig);
+      await renewAccessToken(env, configCache);
       return createLead(data, env);
     }
 
-    throw new CustomError("Failed to sync data with Marketo.", responseData.errors[0].code);
+    throw new CustomError(
+      "Failed to sync data with Marketo.",
+      responseData.errors[0].code
+    );
   }
 }
 
-async function renewAccessToken(marketoConfig, env, cache) {
+async function renewAccessToken(env, cache) {
   const params = new URLSearchParams();
   params.append("client_id", env.CLIENT_ID);
   params.append("client_secret", env.CLIENT_SECRET);
   params.append("grant_type", "client_credentials");
-  const tokenEndpoint = `${env.MARKETO_URL}/identity/oauth/token?${params.toString()}`;
+  const tokenEndpoint = `${
+    env.MARKETO_URL
+  }/identity/oauth/token?${params.toString()}`;
   const response = await fetch(tokenEndpoint);
   if (!response.ok) {
-    throw new CustomError("Failed to obtain Marketo access token. Check Credentials", 400);
+    throw new CustomError(
+      "Failed to obtain Marketo access token. Check Credentials",
+      400
+    );
   }
 
   const responseData = await response.json();
 
   // Update the access token and its expiration time
-  marketoConfig.accessToken = responseData.access_token;
-  marketoConfig.expirationTime = Date.now() / 1000 + responseData.expires_in;
-
+  const accessToken = responseData.access_token;
+  const accessTokenExpirationTime = responseData.expires_in;
   // Store the updated marketoConfig object in KV store
-  await setMarketoConfig(marketoConfig, env, cache);
-}
-
-async function getMarketoConfig(env, cache) {
-  // Retrieve marketoConfig object from KV store
-  const marketoConfigValue = await cache.get(env.MARKETO_CONFIG_KEY, "json");
-
-  // If marketoConfig is not found in KV store, return an empty object
-  return marketoConfigValue || {};
-}
-
-async function setMarketoConfig(marketoConfig, env, cache) {
-  // Store marketoConfig object in KV store
-  await cache.put(env.MARKETO_CONFIG_KEY, JSON.stringify(marketoConfig));
+  await cache.put(
+    env.MARKETO_ACCESS_TOKEN_KEY,
+    accessToken,
+    accessTokenExpirationTime
+  );
 }
 
 function createMarketoPayload(data, env) {

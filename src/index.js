@@ -109,7 +109,11 @@ router.post('*', async (request, env) => {
   const fileUpload = new SharePointFileUpload(env);
   formData && await fileUpload.verifyAndUploadFiles(data, formData);
 
-  createLead(data, env);
+  const formName = new URL(req.url).pathname;
+
+  /** check if current form is enabled for marketo submission */
+  const marektoEnabledForms = JSON.parse(env.MARKETO_ENABLED_FORMS);
+  marektoEnabledForms.includes(formName) && await createLead(data, env);
  
   return await forwardRequest(request, data, redirectHostName);
 });
