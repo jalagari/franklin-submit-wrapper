@@ -22,3 +22,4 @@ MARKETO_CONFIG_KEY="marketoConfig"
 MARKETO_URL="https://797-MKX-025.mktorest.com"
 CLIENT_ID=""
 CLIENT_SECRET=""
+MARKETO_FIELD_MAP='{"First Name":"firstName","Last Name":"lastName","Facility Name":"facilityName","Product Interest":"productInterest","Solution Interest":"solutionInterest","service":"service","message":"message"}'

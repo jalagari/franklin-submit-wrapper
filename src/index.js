@@ -5,7 +5,7 @@ import CORSHandler from './CORSHandler.js';
 import googleRecaptchaValidation from './google/reCaptcha.js';
 import { OBOFAuthenticationProvider } from './microsoft/OBOFAuthenticationProvider.js';
 import SharePointFileUpload from './upload/SharePointFileUpload.js';
-import syncDataWithMarketo from './marketo/MarketoLeadSync.js';
+import createLead from './marketo/MarketoLeadSync.js';
 
 const router = Router();
 let corsHandler;
@@ -109,7 +109,7 @@ router.post('*', async (request, env) => {
   const fileUpload = new SharePointFileUpload(env);
   formData && await fileUpload.verifyAndUploadFiles(data, formData);
 
-  syncDataWithMarketo(data, env);
+  createLead(data, env);
  
   return await forwardRequest(request, data, redirectHostName);
 });
