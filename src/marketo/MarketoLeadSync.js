@@ -1,18 +1,14 @@
 import CustomError from "../model/CustomError.js";
 
-const MARKETO_CONFIG_KEY = "marketoConfig";
-const MARKETO_URL = "https://797-MKX-025.mktorest.com";
-const MARKETO_LEADS_ENDPOINT = `${MARKETO_URL}/rest/v1/leads.json`;
-
-function getMarketoFieldName(fieldName) {
-  const fieldMap = {
-    "First Name": "firstName",
-    "Last Name": "lastName",
-    Email: "email",
-  };
-
-  return fieldMap[fieldName] || null;
-}
+const fieldMap = {
+  "First Name": "firstName",
+  "Last Name": "lastName",
+  "Facility Name": "facilityName",
+  "Product Interest": "productInterest",
+  "Solution Interest": "solutionInterest",
+  "service": "service",
+  "message": "message"
+};
 
 export default async function syncDataWithMarketo(data, env) {
   const marketoConfig = await getMarketoConfig(env);
@@ -28,8 +24,8 @@ export default async function syncDataWithMarketo(data, env) {
   }
 
   const payload = createMarketoPayload(data);
-
-  const response = await fetch(MARKETO_LEADS_ENDPOINT, {
+  const marketoLeadsEndpoint = `${env.MARKETO_URL}/rest/v1/leads.json`;
+  const response = await fetch(marketoLeadsEndpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -39,7 +35,7 @@ export default async function syncDataWithMarketo(data, env) {
   });
 
   const responseData = await response.json();
-  if (!responseData.status) {
+  if (!responseData.success) {
     // If token is expired, attempt to renew the access token and retry
     if (responseData.errors[0].code === 602) {
       await renewAccessToken(marketoConfig);
@@ -55,7 +51,7 @@ async function renewAccessToken(marketoConfig, env) {
   params.append("client_id", env.CLIENT_ID);
   params.append("client_secret", env.CLIENT_SECRET);
   params.append("grant_type", "client_credentials");
-  const tokenEndpoint = `${MARKETO_URL}/identity/oauth/token?${params.toString()}`;
+  const tokenEndpoint = `${env.MARKETO_URL}/identity/oauth/token?${params.toString()}`;
   const response = await fetch(tokenEndpoint);
   if (!response.ok) {
     throw new CustomError("Failed to obtain Marketo access token. Check Credentials", 400);
@@ -73,7 +69,7 @@ async function renewAccessToken(marketoConfig, env) {
 
 async function getMarketoConfig(env) {
   // Retrieve marketoConfig object from KV store
-  const marketoConfigValue = await env.MARKETO_UPLOAD_KV.get(MARKETO_CONFIG_KEY, "json");
+  const marketoConfigValue = await env.MARKETO_UPLOAD_KV.get(env.MARKETO_CONFIG_KEY, "json");
 
   // If marketoConfig is not found in KV store, return an empty object
   return marketoConfigValue || {};
@@ -81,21 +77,18 @@ async function getMarketoConfig(env) {
 
 async function setMarketoConfig(marketoConfig, env) {
   // Store marketoConfig object in KV store
-  await env.MARKETO_UPLOAD_KV.put(MARKETO_CONFIG_KEY, JSON.stringify(marketoConfig));
+  await env.MARKETO_UPLOAD_KV.put(env.MARKETO_CONFIG_KEY, JSON.stringify(marketoConfig));
 }
 
 function createMarketoPayload(data) {
   const payload = {
     input: [],
   };
-
   const inputJsonObject = {};
-  for (const field in data) {
+  for (const field in fieldMap) {
     if (data.hasOwnProperty(field)) {
-      const marketoField = getMarketoFieldName(field);
-      if (marketoField !== null) {
-        inputJsonObject[marketoField] = data[field];
-      }
+      const marketoField = fieldMap[field];
+      inputJsonObject[marketoField] = data[field];
     }
   }
   payload.input.push(inputJsonObject);
