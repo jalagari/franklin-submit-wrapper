@@ -3,15 +3,11 @@ import CustomError from "../model/CustomError.js";
 
 export default async function createLead(data, env) {
   const configCache = new Cache(env.MARKETO_UPLOAD_KV);
-
-  const marketoAccessToken = await configCache.get(
-    env.MARKETO_ACCESS_TOKEN_KEY
-  );
-
+  const marketoConfig = await configCache.get(env.MARKETO_CONFIG_KEY);
   // Check if access token is expired or not set
-  if (!marketoAccessToken) {
+  if (!marketoConfig.accessToken) {
     // Get a new access token
-    await renewAccessToken(env, configCache);
+    await renewAccessToken(marketoConfig, env, configCache);
   }
 
   const payload = createMarketoPayload(data, env);
@@ -20,7 +16,7 @@ export default async function createLead(data, env) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${marketoAccessToken}`,
+      Authorization: `Bearer ${marketoConfig.accessToken}`,
     },
     body: JSON.stringify(payload),
   });
@@ -29,7 +25,7 @@ export default async function createLead(data, env) {
   if (!responseData.success) {
     // If token is expired, attempt to renew the access token and retry
     if (responseData.errors?.[0]?.code === 602) {
-      await renewAccessToken(env, configCache);
+      await renewAccessToken(marketoConfig, env, configCache);
       return createLead(data, env);
     }
 
@@ -40,7 +36,7 @@ export default async function createLead(data, env) {
   }
 }
 
-async function renewAccessToken(env, cache) {
+async function renewAccessToken(marketoConfig, env, cache) {
   const params = new URLSearchParams();
   params.append("client_id", env.CLIENT_ID);
   params.append("client_secret", env.CLIENT_SECRET);
@@ -55,16 +51,16 @@ async function renewAccessToken(env, cache) {
       400
     );
   }
-
+  
   const responseData = await response.json();
 
   // Update the access token and its expiration time
-  const accessToken = responseData.access_token;
+  marketoConfig.accessToken = responseData.access_token;
   const accessTokenExpirationTime = responseData.expires_in;
   // Store the updated marketoConfig object in KV store
   await cache.put(
-    env.MARKETO_ACCESS_TOKEN_KEY,
-    accessToken,
+    env.MARKETO_CONFIG_KEY,
+    marketoConfig,
     accessTokenExpirationTime
   );
 }
