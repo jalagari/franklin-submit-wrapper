@@ -2,7 +2,7 @@ import Cache from "../Cache.js";
 import CustomError from "../model/CustomError.js";
 
 export default async function createLead(data, env) {
-  const configCache = new Cache(env.MARKETO_UPLOAD_KV);
+  const configCache = new Cache(env.FRANKLIN_UPLOAD_KV);
   const marketoConfig = await configCache.get(env.MARKETO_CONFIG_KEY);
   // Check if access token is expired or not set
   if (!marketoConfig.accessToken) {
@@ -10,7 +10,9 @@ export default async function createLead(data, env) {
     await renewAccessToken(marketoConfig, env, configCache);
   }
 
+
   const payload = createMarketoPayload(data, env);
+
   const marketoLeadsEndpoint = `${env.MARKETO_URL}/rest/v1/leads.json`;
   const response = await fetch(marketoLeadsEndpoint, {
     method: "POST",
@@ -30,16 +32,22 @@ export default async function createLead(data, env) {
     }
 
     throw new CustomError(
-      "Failed to sync data with Marketo.",
-      responseData.errors[0].code
+      `Failed to sync data with Marketo: ${responseData.errors?.[0]?.message}`,
+     500
+    )
+  } else if (responseData.success && responseData?.result?.[0]?.status === 'skipped') {
+    throw new CustomError(
+      `Failed to sync data with Marketo: ${responseData?.result?.[0]?.reasons?.[0]?.message}`,
+      500
     );
   }
+  
 }
 
 async function renewAccessToken(marketoConfig, env, cache) {
   const params = new URLSearchParams();
-  params.append("client_id", env.CLIENT_ID);
-  params.append("client_secret", env.CLIENT_SECRET);
+  params.append("client_id", env.MARKETO_CLIENT_ID);
+  params.append("client_secret", env.MARKETO_CLIENT_SECRET);
   params.append("grant_type", "client_credentials");
   const tokenEndpoint = `${
     env.MARKETO_URL

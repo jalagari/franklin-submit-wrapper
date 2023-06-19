@@ -18,9 +18,12 @@ SITE_ID="fac8f079-f817-4127-be6b-700b19217904"
 SITE_FILE_UPLOAD_PATH="sites/mammotome/attachments"
 SITE_FILE_UPLOAD_ID="016MFFNR462FXZSZJATNE3QM2AZVXZQS7X"
 APP_SCOPE="offline_access user.read Files.ReadWrite.All Sites.ReadWrite.All"
+
+# Marketo variable
+
+MARKETO_CLIENT_ID= ""
+MARKETO_CLIENT_SECRET= ""
 MARKETO_CONFIG_KEY="marketoConfig"
-MARKETO_URL="https://797-MKX-025.mktorest.com"
-CLIENT_ID=""
-CLIENT_SECRET=""
-MARKETO_FIELD_MAP='{"First Name":"firstName","Last Name":"lastName","Facility Name":"facilityName","Product Interest":"productInterest","Solution Interest":"solutionInterest","service":"service","message":"message"}'
-MARKETO_ENABLED_FORMS='["contact"]'
+MARKETO_URL=""
+MARKETO_FIELD_MAP='{"firstname":"firstName","lastname":"lastName","company":"facilityName","product":"ProductInterest__c","solutions":"SolutionInterest__c","service":"service","message":"message"}'
+MAREKTO_ENABLED_FORMS='["/contact"]'
