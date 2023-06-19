@@ -5,7 +5,7 @@ export default async function createLead(data, env) {
   const configCache = new Cache(env.FRANKLIN_UPLOAD_KV);
   const marketoConfig = await configCache.get(env.MARKETO_CONFIG_KEY);
   // Check if access token is expired or not set
-  if (!marketoConfig.accessToken) {
+  if ( !marketoConfig?.accessToken ) {
     // Get a new access token
     await renewAccessToken(marketoConfig, env, configCache);
   }
