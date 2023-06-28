@@ -1,5 +1,5 @@
 const { unstable_dev } = require("wrangler");
-const { payload} = require("./util");
+const { payload } = require("./util");
 require('isomorphic-fetch');
 
 describe("Franklin Sumbit Wrapper Marketo sync test cases", () => {
@@ -17,7 +17,6 @@ describe("Franklin Sumbit Wrapper Marketo sync test cases", () => {
         GOOGLE_RECAPTCHA_SECRET_KEY: "",
         ORIGIN_HOSTNAME: "forms-api.azure-api.net",
         MARKETO_ENABLED_FORMS: '["/api/af"]',
-        MARKETO_FIELD_MAP: '{"firstname":"firstName","lastname":"lastName","company":"facilityName2","product":"ProductInterest__c","solutions":"SolutionInterest__c","service":"service","message":"message"}'
       },
 
       experimental: { disableExperimentalWarning: true },
@@ -30,7 +29,7 @@ describe("Franklin Sumbit Wrapper Marketo sync test cases", () => {
 
   it("Submit Form with marketo field not exist", async () => {
     // adding field for which incorrect field mapping exist
-    const updatedPayload = {'company': "test", ...payload};
+    const updatedPayload = {'marketo_non_existent_key': "test", ...payload};
     init.body = JSON.stringify({data : updatedPayload})
     const resp = await worker.fetch('/api/af', init);
     expect(resp.status).toEqual(500);
