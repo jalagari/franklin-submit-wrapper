@@ -25,5 +25,4 @@ MARKETO_CLIENT_ID= ""
 MARKETO_CLIENT_SECRET= ""
 MARKETO_CONFIG_KEY="marketoConfig"
 MARKETO_URL=""
-MARKETO_FIELD_MAP='{"firstname":"firstName","lastname":"lastName","company":"facilityName","product":"ProductInterest__c","solutions":"SolutionInterest__c","service":"service","message":"message"}'
-MAREKTO_ENABLED_FORMS='["/contact"]'
+MARKETO_ENABLED_FORMS='["/forms/products/breast-biopsy-markers","/forms/schedule-a-demo","/forms/contact"]'

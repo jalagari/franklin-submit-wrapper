@@ -10,9 +10,9 @@ export default async function createLead(data, env) {
     await renewAccessToken(marketoConfig, env, configCache);
   }
 
-
-  const payload = createMarketoPayload(data, env);
-
+  const marketoPayload = {
+    input: [ data ],
+  };
   const marketoLeadsEndpoint = `${env.MARKETO_URL}/rest/v1/leads.json`;
   const response = await fetch(marketoLeadsEndpoint, {
     method: "POST",
@@ -20,7 +20,7 @@ export default async function createLead(data, env) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${marketoConfig.accessToken}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(marketoPayload),
   });
 
   const responseData = await response.json();
@@ -30,16 +30,11 @@ export default async function createLead(data, env) {
       await renewAccessToken(marketoConfig, env, configCache);
       return createLead(data, env);
     }
-
-    throw new CustomError(
-      `Failed to sync data with Marketo: ${responseData.errors?.[0]?.message}`,
-     500
-    )
+    console.log(`Failed to sync data with Marketo: ${responseData.errors?.[0]?.message}`)
+    throw new CustomError('Internal server error', 500)
   } else if (responseData.success && responseData?.result?.[0]?.status === 'skipped') {
-    throw new CustomError(
-      `Failed to sync data with Marketo: ${responseData?.result?.[0]?.reasons?.[0]?.message}`,
-      500
-    );
+    console.log(`Failed to sync data with Marketo: ${responseData?.result?.[0]?.reasons?.[0]?.message}`);
+    throw new CustomError('Internal server error', 500);
   }
   
 }
@@ -54,10 +49,8 @@ async function renewAccessToken(marketoConfig, env, cache) {
   }/identity/oauth/token?${params.toString()}`;
   const response = await fetch(tokenEndpoint);
   if (!response.ok) {
-    throw new CustomError(
-      "Failed to obtain Marketo access token. Check Credentials",
-      400
-    );
+    console.log("Failed to obtain Marketo access token. Check Credentials")
+    throw new CustomError("Internal server error", 500);
   }
   
   const responseData = await response.json();
@@ -71,20 +64,4 @@ async function renewAccessToken(marketoConfig, env, cache) {
     marketoConfig,
     accessTokenExpirationTime
   );
-}
-
-function createMarketoPayload(data, env) {
-  const payload = {
-    input: [],
-  };
-  const inputJsonObject = {};
-  const fieldMap = JSON.parse(env.MARKETO_FIELD_MAP);
-  for (const field in fieldMap) {
-    if (data.hasOwnProperty(field)) {
-      const marketoField = fieldMap[field];
-      inputJsonObject[marketoField] = data[field];
-    }
-  }
-  payload.input.push(inputJsonObject);
-  return payload;
 }
