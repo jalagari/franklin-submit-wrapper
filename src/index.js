@@ -5,6 +5,7 @@ import CORSHandler from './CORSHandler.js';
 import googleRecaptchaValidation from './google/reCaptcha.js';
 import { OBOFAuthenticationProvider } from './microsoft/OBOFAuthenticationProvider.js';
 import SharePointFileUpload from './upload/SharePointFileUpload.js';
+import createLead from './marketo/MarketoLeadSync.js';
 
 const router = Router();
 let corsHandler;
@@ -107,6 +108,12 @@ router.post('*', async (request, env) => {
 
   const fileUpload = new SharePointFileUpload(env);
   formData && await fileUpload.verifyAndUploadFiles(data, formData);
+
+  /** check if current form is enabled for marketo submission */
+  const urlPath = new URL(request.url).pathname;
+  const marektoEnabledForms = JSON.parse(env.MARKETO_ENABLED_FORMS);
+  const isFormEnabledForMarketoSync = marektoEnabledForms.some(formPath => urlPath.includes(formPath));
+  isFormEnabledForMarketoSync && await createLead(data, env);
  
   return await forwardRequest(request, data, redirectHostName);
 });

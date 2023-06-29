@@ -1,5 +1,5 @@
 
-exports.payload = {"firstname":"test","lastname":"Test","email":"test@gmail.com","phone":"987654321","addressLine1":"Testing","addressLine2":"","city":"BANGALORE","postalcode":"56000","country":"India","product":"","serialNo":"","inquiry":"test","attachment":"e2e tests"};
+exports.payload = {"firstName":"test","lastName":"test","company":"test","country":"India","postalCode":"131027","phone":"99999999","email":"test@test.com","Preferred_Demo_Days__c":"Monday, Tuesday, Wednesday, Thursday, Friday","Preferred_Demo_Times__c":"Morning, Afternoon, Evening","Pardot_Form_Message__c":"fsa","Products__c":"HydroMARK, Magseed","Solutions__c":"Core Specimen Imaging, Lesion Localization","Email_Opt_In__c":"Yes","Phone_Opt_In__c":"No","Text_Opt_In__c":"Yes"};
 exports.init = {
  headers: {
     'Content-Type': 'application/json',

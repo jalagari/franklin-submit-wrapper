@@ -9,8 +9,14 @@ export default class Cache {
         this.namespace = namespace;
     }
 
-    async put(key, data) {
-        await this.namespace?.put(key, JSON.stringify(data))
+    async put(key, data, ttl) {
+        if (ttl) {
+          await this.namespace?.put(key, JSON.stringify(data), {
+            expirationTtl: ttl,
+          });
+        } else {
+          await this.namespace?.put(key, JSON.stringify(data));
+        }
     }
 
     async get (key) {
